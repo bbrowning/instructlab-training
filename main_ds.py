@@ -45,7 +45,7 @@ def get_ds_config(world_size, samples_per_gpu, grad_accum):
     return ds_config
 
 
-def setup_model(args, tokenizer, train_loader, grad_accum):
+def setup_model(args, tokenizer, train_loader, grad_accum, lora_config):
     if args.is_granite:
         sys.exit("Megatron-based Granite model not supported.")
     else:
@@ -71,6 +71,10 @@ def setup_model(args, tokenizer, train_loader, grad_accum):
     
     model = convert_loss_to_reduce_sum(model)
     model.gradient_checkpointing_enable()
+
+    if lora_config is not None:
+        from peft import get_peft_model
+        model = get_peft_model(model, lora_config)
 
     optimizer = FusedAdam(model.parameters(), lr=args.learning_rate, betas=(0.9, 0.95))
     lr_scheduler = get_scheduler(
@@ -237,7 +241,21 @@ def main(args):
             f"samples_per_gpu: {args.samples_per_gpu}\033[0m"
         )
 
-    model = setup_model(args, tokenizer, train_loader, grad_accum)
+    lora_config = None
+    if args.lora_rank > 0:
+        from peft import LoraConfig
+        lora_alpha = 32
+        lora_dropout = 0.1
+        lora_target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+        lora_config = LoraConfig(
+            lora_alpha=lora_alpha,
+            lora_dropout=lora_dropout,
+            r=args.lora_rank,
+            bias="none",
+            task_type="CAUSAL_LM",
+            target_modules=lora_target_modules,
+        )
+    model = setup_model(args, tokenizer, train_loader, grad_accum, lora_config)
 
     train(args, model, tokenizer, train_loader, grad_accum)
 
@@ -270,6 +288,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("--is_granite", action="store_true")
     parser.add_argument("--max_batch_len", type=int, default=60000)
+    parser.add_argument(
+        "--lora_rank",
+        type=int,
+        default=0,
+        help="LoRA rank to use - 0 disables LoRA"
+    )
     args = parser.parse_args()
     set_random_seed(args.seed)
     main(args)
