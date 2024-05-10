@@ -246,7 +246,8 @@ def main(args):
         from peft import LoraConfig
         lora_alpha = 32
         lora_dropout = 0.1
-        lora_target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+        # lora_target_modules = ["q_proj", "k_proj", "v_proj", "o_proj"]
+        lora_target_modules = "all-linear"
         lora_config = LoraConfig(
             lora_alpha=lora_alpha,
             lora_dropout=lora_dropout,
