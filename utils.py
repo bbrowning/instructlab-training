@@ -159,8 +159,10 @@ def save_hf_format(args, model, tokenizer, samples_seen):
     log_rank_0(f"saving took {time.time() - start} seconds")
 
 
-def save_hf_format_ds(args, model, tokenizer, samples_seen):
+def save_hf_format_ds(args, model, tokenizer, samples_seen, lora_config):
     model_to_save = model.module
+    if lora_config is not None:
+        model_to_save = model_to_save.merge_and_unload()
     log_rank_0(
         f"\033[93mSaving model in huggingface format at samples_seen: {samples_seen}\033[0m",
         to_print=True,

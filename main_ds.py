@@ -99,7 +99,7 @@ def setup_model(args, tokenizer, train_loader, grad_accum, lora_config):
     return model
 
 
-def train(args, model, tokenizer, train_loader, grad_accum):
+def train(args, model, tokenizer, train_loader, grad_accum, lora_config):
     model.train()
 
     global_step = 1
@@ -175,6 +175,7 @@ def train(args, model, tokenizer, train_loader, grad_accum):
                     model,
                     tokenizer,
                     global_step * args.samples_per_gpu * world_size,
+                    lora_config,
                 )
 
             global_step += 1
@@ -258,7 +259,7 @@ def main(args):
         )
     model = setup_model(args, tokenizer, train_loader, grad_accum, lora_config)
 
-    train(args, model, tokenizer, train_loader, grad_accum)
+    train(args, model, tokenizer, train_loader, grad_accum, lora_config)
 
     torch.distributed.barrier()
     torch.distributed.destroy_process_group()
