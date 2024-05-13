@@ -173,8 +173,7 @@ def save_hf_format_ds(args, model, tokenizer, samples_seen, lora_config):
     WEIGHTS_NAME = "pytorch_model.bin"
     output_dir = Path(args.output_dir) / "hf_format" / f"samples_{samples_seen}"
     if torch.distributed.get_rank() == 0:
-        model_state = deepspeed.checkpoint.utils.clone_tensors_for_torch_save(model_to_save.state_dict())
-        model_to_save.save_pretrained(output_dir, state_dict=model_state, safe_serialization=False)
+        model_to_save.save_pretrained(output_dir, safe_serialization=False)
         # model_state = model_to_save.state_dict()
         # output_dir.mkdir(parents=True, exist_ok=True)
         # output_model_file = output_dir / WEIGHTS_NAME
