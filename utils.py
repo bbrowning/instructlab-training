@@ -173,14 +173,16 @@ def save_hf_format_ds(args, model, tokenizer, samples_seen, lora_config):
     WEIGHTS_NAME = "pytorch_model.bin"
     output_dir = Path(args.output_dir) / "hf_format" / f"samples_{samples_seen}"
     if torch.distributed.get_rank() == 0:
-        model_to_save.save_pretrained(output_dir, safe_serialization=False)
-        # model_state = model_to_save.state_dict()
-        # output_dir.mkdir(parents=True, exist_ok=True)
-        # output_model_file = output_dir / WEIGHTS_NAME
-        # output_config_file = output_dir / CONFIG_NAME
-        # torch.save(model_state, str(output_model_file))
-        # model_to_save.config.to_json_file(str(output_config_file))
-        # tokenizer.save_pretrained(str(output_dir))
+        if lora_config is not None:
+            model_to_save.save_pretrained(output_dir, safe_serialization=False)
+        else:
+            model_state = model_to_save.state_dict()
+            output_dir.mkdir(parents=True, exist_ok=True)
+            output_model_file = output_dir / WEIGHTS_NAME
+            output_config_file = output_dir / CONFIG_NAME
+            torch.save(model_state, str(output_model_file))
+            model_to_save.config.to_json_file(str(output_config_file))
+        tokenizer.save_pretrained(str(output_dir))
     dist.barrier()
     log_rank_0(f"\033[93mModel saved in {output_dir}\033[0m", to_print=True)
     log_rank_0(f"saving took {time.time() - start} seconds")
