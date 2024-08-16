@@ -201,6 +201,7 @@ def find_packing_max_batch_len_and_grad_accum(
 
     packing_max_batch_len = max_batch_len_per_gpu + 1
     grad_accum = 0
+    sum_all_lengths = dataset.get_lengths().sum()
     while packing_max_batch_len > max_batch_len_per_gpu:
         grad_accum += 1
         total_micro_batch = (effective_batch_size / grad_accum) / num_gpus
@@ -209,20 +210,27 @@ def find_packing_max_batch_len_and_grad_accum(
                 f"Effective batch size is too low for multipack sampling, max sample length={dataset.get_lengths().max()} and min packing length={int(avg_sample_len * total_micro_batch)}. "
                 "Switching to naive distributed sampling."
             )
-        if is_padding:
-            addition = find_padding_max_batch_len_addition(
-                avg_sample_len,
-                effective_batch_size,
-                dataset,
-                num_gpus,
-                grad_accum,
-                pad_id,
-                max_batch_len_per_gpu,
-                seed,
-            )
+        if packing_max_batch_len > sum_all_lengths:
+            # Ensure we don't calculate a batch length longer than the
+            # entire dataset in question
+            packing_max_batch_len = sum_all_lengths
         else:
-            addition = 0
-        packing_max_batch_len = int((avg_sample_len + addition) * total_micro_batch)
+            if is_padding:
+                addition = find_padding_max_batch_len_addition(
+                    avg_sample_len,
+                    effective_batch_size,
+                    dataset,
+                    num_gpus,
+                    grad_accum,
+                    pad_id,
+                    max_batch_len_per_gpu,
+                    seed,
+                )
+            else:
+                addition = 0
+                packing_max_batch_len = int(
+                    (avg_sample_len + addition) * total_micro_batch
+                )
 
     return packing_max_batch_len, grad_accum
 
